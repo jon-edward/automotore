@@ -19,7 +19,11 @@ class TestWheelhouse(unittest.TestCase):
         temp_dir = self.enterContext(TemporaryDirectory())
 
         self._venv_dir = Path(temp_dir) / "venv"
-        self._venv_python = self._venv_dir / "Scripts" / "python"
+
+        if sys.platform == "win32":
+            self._venv_python = self._venv_dir / "Scripts" / "python.exe"
+        else:
+            self._venv_python = self._venv_dir / "bin" / "python3"
         self._requirements_path = Path(temp_dir) / "requirements.txt"
         self._output_path = Path(temp_dir) / "packages.pyz"
 
