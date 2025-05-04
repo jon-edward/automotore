@@ -21,7 +21,10 @@ class WheelhouseConfig:
     Configuration for wheelhouse creation
     """
 
-    requirements_path: Path = Path("requirements.txt")
+    requirements: list[str] = None
+    """ List of requirements to download to the wheelhouse. """
+
+    requirements_path: Path = None
     """ Path to requirements.txt file to use for wheelhouse creation. """
 
     output_path: Path = Path("packages.pyz")
@@ -39,8 +42,11 @@ class WheelhouseConfig:
     implementation: str = None
     """ Implementation to build wheels for (if not the current implementation). """
 
-    show_command: bool = True
+    show_command: bool = False
     """ Show the command used to create the wheelhouse. """
+
+    dest_dir_root: Path = None
+    """ Path to use as a root for the temporary directory passed to pip download. """
 
 
 def create_wheelhouse(config: WheelhouseConfig = None) -> Path:
@@ -51,25 +57,30 @@ def create_wheelhouse(config: WheelhouseConfig = None) -> Path:
     if config is None:
         config = WheelhouseConfig()
 
-    with tempfile.TemporaryDirectory() as tempdir:
-        extra_args = ()
+    with tempfile.TemporaryDirectory(dir=config.dest_dir_root, prefix="automotore-") as tempdir:
+        download_args = ()
+
+        if config.requirements:
+            download_args += tuple(config.requirements)
+        
+        if config.requirements_path:
+            download_args += "--requirement", str(config.requirements_path)
 
         if config.python_version:
-            extra_args += "--python-version", config.python_version
+            download_args += "--python-version", config.python_version
 
         if config.platform:
-            extra_args += "--platform", config.platform
+            download_args += "--platform", config.platform
 
         if config.abi:
-            extra_args += "--abi", config.abi
+            download_args += "--abi", config.abi
 
         if config.implementation:
-            extra_args += "--implementation", config.implementation
+            download_args += "--implementation", config.implementation
         
         py_args = [
-            sys.executable, "-m", "pip", "download", *extra_args, 
-            "-d", tempdir, "--only-binary=:all:", 
-            "-r", str(config.requirements_path), "--no-cache-dir"
+            sys.executable, "-m", "pip", "download", *download_args, 
+            "--dest", tempdir, "--only-binary=:all:", "--no-cache-dir"
         ]
 
         if config.show_command:

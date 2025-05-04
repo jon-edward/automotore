@@ -15,15 +15,21 @@ def iter_wheels(directory: Path) -> typing.Iterable[str]:
         yield wheel
 
 def pip_cmd(directory: Path, pip_args: typing.Iterable[str]) -> typing.List[str]:
+    # Start subprocess with same executable that invoked this script
+    py_prefix = [sys.executable, "-m"]
     if pip_args[0] == "install":
-        return ["pip", *pip_args, "--find-links=" + str(directory), "--no-index"]
-    return ["pip", *pip_args]
+        # Only add --find-links and --no-index if installing, otherwise use commands from user exactly
+        return [*py_prefix, "pip", *pip_args, "--find-links=" + str(directory), "--no-index"]
+    return [*py_prefix, "pip", *pip_args]
 
 def install_all_packages(directory: Path):
     """
     Installs all packages contained in this wheelhouse
     """
     wheel_names = {Path(wheel).stem.split("-")[0] for wheel in iter_wheels(directory)}
+    if not wheel_names:
+        logging.warning("No packages found in wheelhouse")
+        return
     subprocess.check_call(pip_cmd(directory, ["install", *wheel_names]))
 
 if __name__ == "__main__":
@@ -31,15 +37,17 @@ if __name__ == "__main__":
 
     args = sys.argv
 
-    if "--version" in args or "-v" in args:
+    if len(args) == 2 and (args[1] == "-v" or args[1] == "--version"):
         print(f"automotore v{__version__}")
         sys.exit(0)
     
-    if "--help" in args or "-h" in args:
-        print(f"usage: {args[0]} [-h] [-v] [pip_args ...] | {args[0]} [install | i]")
+    if len(args) == 2 and (args[1] == "-h" or args[1] == "--help"):
+        print(f"usage: {args[0]} [--help | -h] [--version | -v] [pip_args ...] | {args[0]} [install | i]")
         sys.exit(0)
     
     args = args[1:]
+    if args and args[0] == "--":
+        args = args[1:]
 
     if not args:
         print("No arguments provided. Use --help for more info.")
