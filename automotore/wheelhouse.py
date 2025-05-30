@@ -80,7 +80,7 @@ def create_wheelhouse(config: WheelhouseConfig = None) -> Path:
         
         py_args = [
             sys.executable, "-m", "pip", "download", *download_args, 
-            "--dest", tempdir, "--only-binary=:all:", "--no-cache-dir"
+            "--dest", tempdir, "--prefer-binary", "--no-cache-dir"
         ]
 
         if config.show_command:
